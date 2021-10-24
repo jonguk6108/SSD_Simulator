@@ -1,0 +1,31 @@
+2c2
+< Blocks / Bank: 100 blocks
+---
+> Blocks / Bank: 80 blocks
+6,10c6,10
+< Physical Blocks: 1600
+< User Blocks: 1312
+< OP Blocks: 96
+< PPNs: 38400
+< LPNs: 31488
+---
+> Physical Blocks: 1280
+> User Blocks: 1168
+> OP Blocks: 112
+> PPNs: 30720
+> LPNs: 28032
+40891,40899c40891,40894
+< GC writes: 669524
+< Number of GCs: 40565
+< MAP writes : 819081
+< Number of MAP GCs : 53686
+< Number of MAP GC write : 474643
+< Valid pages per GC: 16.50 pages
+< Valid pages per Map GC: 8.84 pages
+< Cache hit rate : 64.21 %
+< WAF: 7.21
+---
+> GC writes: 1156370
+> Number of GCs: 60929
+> Valid pages per GC: 18.98 pages
+> WAF: 4.68

@@ -1,0 +1,50 @@
+Bank: 8
+Blocks / Bank: 32 blocks
+Pages / Block: 32 pages
+OP ratio: 7%
+Physical Blocks: 256
+User Blocks: 224
+OP Blocks: 32
+PPNs: 8192
+LPNs: 7168
+Workload: Random
+FTL: Greedy policy
+
+[Run 1] host write 133321 nand write 190512 gc write 190912  GC# 1243, WAF 2.86
+[Run 2] host write 264191 nand write 378336 gc write 839288  GC# 4509, WAF 4.61
+[Run 3] host write 394674 nand write 565752 gc write 1546312  GC# 8003, WAF 5.35
+[Run 4] host write 523529 nand write 752528 gc write 2257048  GC# 11509, WAF 5.75
+[Run 5] host write 654304 nand write 940856 gc write 2984992  GC# 15088, WAF 6.00
+[Run 6] host write 786332 nand write 1130312 gc write 3708144  GC# 18653, WAF 6.15
+[Run 7] host write 918311 nand write 1319192 gc write 4428024  GC# 22203, WAF 6.26
+[Run 8] host write 1048980 nand write 1506592 gc write 5144136  GC# 25732, WAF 6.34
+[Run 9] host write 1180118 nand write 1694992 gc write 5864016  GC# 29280, WAF 6.41
+[Run 10] host write 1311117 nand write 1883768 gc write 6581720  GC# 32821, WAF 6.46
+[Run 11] host write 1442688 nand write 2072416 gc write 7306920  GC# 36391, WAF 6.50
+[Run 12] host write 1574110 nand write 2260696 gc write 8032120  GC# 39959, WAF 6.54
+[Run 13] host write 1704905 nand write 2449016 gc write 8749344  GC# 43496, WAF 6.57
+[Run 14] host write 1836759 nand write 2638056 gc write 9471144  GC# 47054, WAF 6.59
+[Run 15] host write 1966649 nand write 2825160 gc write 10186592  GC# 50580, WAF 6.62
+[Run 16] host write 2097348 nand write 3013232 gc write 10902872  GC# 54113, WAF 6.64
+[Run 17] host write 2228743 nand write 3202016 gc write 11623248  GC# 57664, WAF 6.65
+[Run 18] host write 2359894 nand write 3390656 gc write 12340936  GC# 61204, WAF 6.67
+[Run 19] host write 2491640 nand write 3579648 gc write 13060704  GC# 64754, WAF 6.68
+[Run 20] host write 2622114 nand write 3767448 gc write 13779024  GC# 68294, WAF 6.69
+[Run 21] host write 2753003 nand write 3955160 gc write 14495784  GC# 71827, WAF 6.70
+[Run 22] host write 2884225 nand write 4143944 gc write 15221032  GC# 75397, WAF 6.71
+[Run 23] host write 3015438 nand write 4332752 gc write 15942576  GC# 78953, WAF 6.72
+[Run 24] host write 3147880 nand write 4522944 gc write 16674752  GC# 82556, WAF 6.73
+[Run 25] host write 3278087 nand write 4710576 gc write 17389200  GC# 86080, WAF 6.74
+[Run 26] host write 3408974 nand write 4898816 gc write 18108952  GC# 89627, WAF 6.75
+[Run 27] host write 3539405 nand write 5087000 gc write 18822664  GC# 93150, WAF 6.76
+[Run 28] host write 3669688 nand write 5275272 gc write 19546576  GC# 96713, WAF 6.76
+[Run 29] host write 3800856 nand write 5463424 gc write 20265440  GC# 100256, WAF 6.77
+[Run 30] host write 3931300 nand write 5651272 gc write 20987656  GC# 103811, WAF 6.78
+
+Results ------
+Host writes: 3931300
+Nand writes: 5651272
+GC writes: 20987656
+Number of GCs: 103811
+Valid pages per GC: 25.27 pages
+WAF: 6.78

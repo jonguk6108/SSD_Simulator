@@ -1,0 +1,28 @@
+Bank: 2
+Blocks / Bank: 8 blocks
+Pages / Block: 4 pages
+Sectors per Page: 8
+OP ratio: 7%
+Physical Blocks: 16
+User Blocks: 12
+OP Blocks: 4
+PPNs: 64
+LPNs: 48
+
+Write(0,8): [b4 a2  8 87  2 e5 bb 3d ]
+Read(0,8): [ b4 a2  8 87  2 e5 bb 3d ]
+Write(80,8): [c7 e6 98 e4 df dc ce f4 ]
+Read(80,8): [ c7 e6 98 e4 df dc ce f4 ]
+Write(160,8): [d1 9c e2 41 64 a6 60 af ]
+Read(160,8): [ d1 9c e2 41 64 a6 60 af ]
+Write(84,80): [ea 63  6 a4 d3 81 36 87 23 3e  f 25 23 ca 62 eb b0 fa cf 90 d6 9d 84 a8 39 66 e9 9e  d 49 4d f7 ad 54 9b 80 d5 d2  7 f8 10 16 1d 34 e1 7f 1f 91 79 ee 21 4f 8b a6 f7 c4  c e1 62 19 2a b0 11 d7  4 ac 57 d9 7e 5f d1 8f 75 ee c3 56 6d e2 e8 e6 ]
+Read(80,88): [ c7 e6 98 e4 ea 63  6 a4 d3 81 36 87 23 3e  f 25 23 ca 62 eb b0 fa cf 90 d6 9d 84 a8 39 66 e9 9e  d 49 4d f7 ad 54 9b 80 d5 d2  7 f8 10 16 1d 34 e1 7f 1f 91 79 ee 21 4f 8b a6 f7 c4  c e1 62 19 2a b0 11 d7  4 ac 57 d9 7e 5f d1 8f 75 ee c3 56 6d e2 e8 e6 64 a6 60 af ]
+Flush()
+
+Results ------
+Host writes: 104
+NAND writes: 96
+GC writes: 0
+Number of GCs: 0
+Valid pages per GC: -nan pages
+WAF: 0.92

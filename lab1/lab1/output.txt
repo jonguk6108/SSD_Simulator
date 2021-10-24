@@ -1,0 +1,40 @@
+Init(2,8,8): success
+Write(0,3,0): success
+Write(0,3,1): success
+Write(0,3,2): success
+Write(0,3,3): success
+Write(0,3,4): success
+Write(0,3,5): success
+Write(0,3,6): success
+Write(0,3,7): success
+Write(-1,0,0): failed, invalid address
+Read(0,3,0): success, data = [       11       22       33       44       55       66       77       88 ] spare = [       ff ]
+Read(0,3,1): success, data = [       11       22       33       44       55       66       77       88 ] spare = [       ff ]
+Read(0,3,2): success, data = [       11       22       33       44       55       66       77       88 ] spare = [       ff ]
+Read(0,3,3): success, data = [       11       22       33       44       55       66       77       88 ] spare = [       ff ]
+Read(0,3,4): success, data = [       11       22       33       44       55       66       77       88 ] spare = [       ff ]
+Read(0,3,5): success, data = [       11       22       33       44       55       66       77       88 ] spare = [       ff ]
+Read(0,3,6): success, data = [       11       22       33       44       55       66       77       88 ] spare = [       ff ]
+Read(0,3,7): success, data = [       11       22       33       44       55       66       77       88 ] spare = [       ff ]
+Erase(0,3): success
+Read(0,3,0): failed, trying to read empty page
+Read(0,3,1): failed, trying to read empty page
+Read(0,3,2): failed, trying to read empty page
+Read(0,3,3): failed, trying to read empty page
+Read(0,3,4): failed, trying to read empty page
+Read(0,3,5): failed, trying to read empty page
+Read(0,3,6): failed, trying to read empty page
+Read(0,3,7): failed, trying to read empty page
+Write(0,2,0): success
+Write(0,2,1): success
+Write(0,2,3): failed, the page is not being sequentially written
+Write(0,2,2): success
+Write(0,2,3): success
+Read(0,2,0): success, data = [     1111     1111     1111     1111     1111     1111     1111     1111 ] spare = [     2222 ]
+Read(0,2,1): success, data = [     1111     1111     1111     1111     1111     1111     1111     1111 ] spare = [     2222 ]
+Read(0,2,2): success, data = [     1111     1111     1111     1111     1111     1111     1111     1111 ] spare = [     2222 ]
+Read(0,2,3): success, data = [     1111     1111     1111     1111     1111     1111     1111     1111 ] spare = [     2222 ]
+Read(0,2,4): failed, trying to read empty page
+Read(0,2,5): failed, trying to read empty page
+Read(0,2,6): failed, trying to read empty page
+Read(0,2,7): failed, trying to read empty page
