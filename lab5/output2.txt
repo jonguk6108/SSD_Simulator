@@ -1,0 +1,41 @@
+=================Setup==================
+Banks: 4
+Blocks per Bank: 16
+Pages per Block: 4
+Sectors per Page: 8
+Max Zones: 24 zones
+Max LBA: 1536 sectors
+Zone Size: 64 sectors
+Degree of Zone: 2
+Max Open Zones: 4
+
+================Simulator==============
+Write(64,16): [ 17 ab ac 97 8c 81 b2 56 1a 58 ce 72 2f a9 e1 15 ]
+Write(80,16): [ 70 bd 5c ed 2e 41 a2 34 b2 6b 75 c3 fd b6 16 14 ]
+Write(96,16): [ 62 c2 ab ee 43 5d 45 5d b5 13 d0 e4 bc b1 fa 2c ]
+Write(112,16): [ 6e 56 19 9c 97 bc d0 49 27 45  c 24 fc 22 38 5e ]
+Read(64,16): [ 17 ab ac 97 8c 81 b2 56 1a 58 ce 72 2f a9 e1 15 ]
+Read(80,16): [ 70 bd 5c ed 2e 41 a2 34 b2 6b 75 c3 fd b6 16 14 ]
+Read(96,16): [ 62 c2 ab ee 43 5d 45 5d b5 13 d0 e4 bc b1 fa 2c ]
+Read(112,16): [ 6e 56 19 9c 97 bc d0 49 27 45  c 24 fc 22 38 5e ]
+Internal Zone Compaction(1, 0)
+Read(0,16): [ 17 1a 70 b2 62 b5 ab ac 97 8c 81 ffffffff ffffffff ffffffff ffffffff ffffffff ]
+Read(64,16): [ ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ]
+Write(11,5): [ e4 e4 4c 27 41 ]
+Write(16,16): [ 91 85 f7 a4 55 db 61  6 d5 8d 74 2b a7 10 c2 63 ]
+Write(32,16): [ e0  c 8a 25 18 af 21 3b e7 7f 1f cb cc 47  d 5d ]
+Write(48,16): [ cc  4  2 21 df 63 27 b5 f0 9b e0 97 ab a3 fa 8b ]
+Read(0,16): [ 17 1a 70 b2 62 b5 ab ac 97 8c 81 e4 e4 4c 27 41 ]
+Read(16,16): [ 91 85 f7 a4 55 db 61  6 d5 8d 74 2b a7 10 c2 63 ]
+Read(32,16): [ e0  c 8a 25 18 af 21 3b e7 7f 1f cb cc 47  d 5d ]
+Read(48,16): [ cc  4  2 21 df 63 27 b5 f0 9b e0 97 ab a3 fa 8b ]
+TL Open(0)
+Write(4,4): [ af 85 b0 c7 ]
+Write(8,8): [ 34 d2  2 1b 51 22 e7 1d ]
+Write(16,8): [ 69 f4 7b 35 f8 7d 56 d7 ]
+Write(32,2): [ e0 7d ]
+Write(36,4): [ 8c d0 18 6d ]
+Write(40,8): [ 68 c3 10 62 4e bf e7 fe ]
+Write(48,8): [ 86 1b d0 89 37 22 ab 1e ]
+Write(56,6): [ 3f 14 12 ba 49  a ]
+Get Zone Desc(0, 1): [ 0:2,0,64 ]

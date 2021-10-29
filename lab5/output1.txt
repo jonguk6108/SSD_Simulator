@@ -1,0 +1,38 @@
+=================Setup==================
+Banks: 4
+Blocks per Bank: 8
+Pages per Block: 4
+Sectors per Page: 8
+Max Zones: 8 zones
+Max LBA: 512 sectors
+Zone Size: 64 sectors
+Degree of Zone: 2
+Max Open Zones: 4
+
+================Simulator==============
+Write(0,3): [ 8c 39 e3 ]
+Write(3,2): [ c0 aa ]
+Write(2,2): failed
+Read(0,2): [ 8c 39 ]
+Read(2,2): [ e3 c0 ]
+Read(0,4): [ 8c 39 e3 c0 ]
+Read(2,2): [ e3 c0 ]
+Write(5,3): [ 79 9c 91 ]
+Read(0,8): [ 8c 39 e3 c0 aa 79 9c 91 ]
+Write(32,16): failed
+Write(64,16): [ b9 76 bc 5b be 49 94 a1  9 3e 11 2f b8 ad c0 68 ]
+Read(64,32): [ b9 76 bc 5b be 49 94 a1  9 3e 11 2f b8 ad c0 68 ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ]
+Write(128,10): [ d4 6d fd c6 8f 8d d8 85 d6 94 ]
+Read(128,16): [ d4 6d fd c6 8f 8d d8 85 d6 94 ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ]
+Write(192,16): [ 65 da bd 2d 8a 76 a3 47 d1 61 90 66  3 99 a4 14 ]
+Read(192,16): [ 65 da bd 2d 8a 76 a3 47 d1 61 90 66  3 99 a4 14 ]
+Write(256,16): failed
+Write(80,16): [  0 86 9d 8a fd 40 d1 ce a1 61 34 a4 fa d9 b8 c2 ]
+Write(96,16): [ 35 7a 4b fa 10 41 bc 6c c6  c a1 d1 32 6a 41 32 ]
+Write(112,16): [ f1 de bc ee 1e 8e bc bf ef f1 64 ea ca 1c ac ff ]
+Write(256,16): [ 96 f7 fa a6 38 b6 13 ff c2 b4 d0 f4 1f 11 26 10 ]
+Read(64,64): [ b9 76 bc 5b be 49 94 a1  9 3e 11 2f b8 ad c0 68  0 86 9d 8a fd 40 d1 ce a1 61 34 a4 fa d9 b8 c2 35 7a 4b fa 10 41 bc 6c c6  c a1 d1 32 6a 41 32 f1 de bc ee 1e 8e bc bf ef f1 64 ea ca 1c ac ff ]
+Get Zone Desc(0, 8): [ 0:1,0,8 1:2,64,128 2:1,128,138 3:1,192,208 4:1,256,272 5:0,320,320 6:0,384,384 7:0,448,448 ]
+Reset(64)
+Read(64,64): [ ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff ]
+Get Zone Desc(0, 8): [ 0:1,0,8 1:0,64,64 2:1,128,138 3:1,192,208 4:1,256,272 5:0,320,320 6:0,384,384 7:0,448,448 ]
