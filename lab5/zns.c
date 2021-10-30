@@ -11,6 +11,9 @@
  * http://nyx.skku.ac.kr
  */
 #include "zns.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "nand.h"
 
 /************ constants ************/
 int NBANK;
@@ -22,7 +25,11 @@ int MAX_OPEN_ZONE;
 
 int NUM_FCG;
 /********** do not touch ***********/
-
+int** ZONE; // [zone number][state, write pointer, state lba];
+u32** BUFFER; // [zone number][value of sectors + lba];
+int* ZTF; //[zone number] = blk number;
+int* FB; //[queue] = size(numbers of freeblk), freeblk;
+int** TL_BITMAP; // [zone number][zone_tlnum, bitmap];
 
 void zns_init(int nbank, int nblk, int npage, int dzone, int max_open_zone)
 {
@@ -37,28 +44,103 @@ void zns_init(int nbank, int nblk, int npage, int dzone, int max_open_zone)
 	// nand
 	nand_init(nbank, nblk, npage);
 
+  ZONE = (int **)malloc(sizeof(int*) * max_open_zone);
+  for(int i = 0; i < max_open_zone; i++)
+    ZONE[i] = (int *)malloc(sizeof(int) * 3);
+  BUFFER = (u32 **)malloc(sizeof(u32*) * max_open_zone);
+  for(int i = 0; i < max_open_zone; i++)
+    BUFFER[i] = (u32 *)malloc(sizeof(u32) * NSECT);
+  ZTF = (int *)malloc(sizeof(int) * max_open_zone);
+  FB = (int *)malloc(sizeof(int) * nblk);
+  TL_BITMAP = (int **)malloc(sizeof(int*) * max_open_zone);
+  for(int i = 0; i < max_open_zone; i++)
+    TL_BITMAP[i] = (int *)malloc(sizeof(int) * dzone * NSECT * NPAGE);
+ 
+  for(int i = 0; i < max_open_zone; i++) {
+    ZONE[i][0] = 0;
+    ZONE[i][1] = DEG_ZONE * NSECT * NPAGE;
+    ZONE[i][2] = DEG_ZONE * NSECT * NPAGE;
+  }
+  for(int i = 0; i < max_open_zone; i++)
+    for(int j = 0; j < NSECT; j++)
+      BUFFER[i][j] = - 1;
+  for(int i = 0; i < max_open_zone; i++)
+    ZTF[i] = -1;
+  for(int i = 0; i < NBLK; i++)
+    FB[i] = i;
+  FB[NBLK] = 0;
+  for(int i = 0; i < max_open_zone; i++)
+    for(int j = 0; j < DEG_ZONE * NSECT * NPAGE; j++)
+      TL_BITMAP[i][j] = 0;
+
 }
 
 int zns_write(int start_lba, int nsect, u32 *data)
 {
+  int i_sect = 0;
+  while(i_sect < nsect) {
+    int c_lba = start_lba + i_sect;
+    int lba = start_lba + i_sect;
+    int c_sect = lba % NSECT;
+    lba = lba / NSECT;
+    int b_offset = lba % DEG_ZONE;
+    lba = lba / DEG_ZONE;
+    int p_offset = lba % NPAGE;
+    lba = lba / NPAGE;
+    int c_fcg = lba % NUM_FCG;
+
+    int c_zone = lba / NUM_FCG;
+    int c_bank = c_fcg * DEG_ZONE + b_offset;
+
+    if(ZONE[c_zone][0] == 0 || ZONE[c_zone][0] == 1) {
+      if(ZONE[c_zone][1] != c_lba)
+        return -1;
+
+      if(ZONE[c_zone][0] == 0) {
+        ZTF[c_zone] = FB[0];
+
+        if(FB[NBLK] == MAX_OPEN_ZONE) return -1;
+        for(int i = 0; i < NBLK-1; i++)
+          FB[i] = FB[i+1];
+        FB[NBLK-1] = -1;
+        FB[NBLK] += 1; // use free blk!!
+        ZONE[c_zone][0] = 1;
+      }
+     
+      ZONE[c_zone][1]++;
+      BUFFER[c_zone][c_sect] = data[i_sect];
+
+      if(c_sect == NSECT-1) {
+        u32 spare[] = {c_lba};
+        nand_write(c_bank, ZTF[c_zone], p_offset, BUFFER[c_zone], spare);
+      }
+    }
+
+    i_sect++;
+  }
 }
 
 void zns_read(int start_lba, int nsect, u32 *data)
 {
+  return;
 }
 
 int zns_reset(int lba)
 {
+  return 0;
 }
 
 void zns_get_desc(int lba, int nzone, struct zone_desc *descs)
 {
+  return;
 }
 
 int zns_izc(int src_zone, int dest_zone, int copy_len, int *copy_list)
 {
+  return 0;
 }
 
 int zns_tl_open(int zone, u8 *valid_arr)
 {
+  return 0;
 }
