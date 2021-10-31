@@ -31,6 +31,8 @@ int* ZTF; //[zone number] = blk number;
 int* FB; //[queue] = size(numbers of freeblk), freeblk;
 int** TL_BITMAP; // [zone number][zone_tlnum, bitmap];
 
+int OPEN_ZONE;
+
 void zns_init(int nbank, int nblk, int npage, int dzone, int max_open_zone)
 {
 	// constants
@@ -44,34 +46,35 @@ void zns_init(int nbank, int nblk, int npage, int dzone, int max_open_zone)
 	// nand
 	nand_init(nbank, nblk, npage);
 
-  ZONE = (int **)malloc(sizeof(int*) * max_open_zone);
-  for(int i = 0; i < max_open_zone; i++)
+  ZONE = (int **)malloc(sizeof(int*) * NBLK);
+  for(int i = 0; i < NBLK; i++)
     ZONE[i] = (int *)malloc(sizeof(int) * 3);
-  BUFFER = (u32 **)malloc(sizeof(u32*) * max_open_zone);
-  for(int i = 0; i < max_open_zone; i++)
+  BUFFER = (u32 **)malloc(sizeof(u32*) * NBLK);
+  for(int i = 0; i < NBLK; i++)
     BUFFER[i] = (u32 *)malloc(sizeof(u32) * NSECT);
-  ZTF = (int *)malloc(sizeof(int) * max_open_zone);
-  FB = (int *)malloc(sizeof(int) * nblk);
-  TL_BITMAP = (int **)malloc(sizeof(int*) * max_open_zone);
-  for(int i = 0; i < max_open_zone; i++)
-    TL_BITMAP[i] = (int *)malloc(sizeof(int) * dzone * NSECT * NPAGE);
+  ZTF = (int *)malloc(sizeof(int) * NBLK);
+  FB = (int *)malloc(sizeof(int) * (NBLK+1));
+  TL_BITMAP = (int **)malloc(sizeof(int*) * NBLK);
+  for(int i = 0; i < NBLK; i++)
+    TL_BITMAP[i] = (int *)malloc(sizeof(int) * DEG_ZONE * NSECT * NPAGE);
  
-  for(int i = 0; i < max_open_zone; i++) {
+  for(int i = 0; i < NBLK; i++) {
     ZONE[i][0] = 0;
     ZONE[i][1] = i * DEG_ZONE * NSECT * NPAGE;
     ZONE[i][2] = i * DEG_ZONE * NSECT * NPAGE;
   }
-  for(int i = 0; i < max_open_zone; i++)
+  for(int i = 0; i < NBLK; i++)
     for(int j = 0; j < NSECT; j++)
       BUFFER[i][j] = - 1;
-  for(int i = 0; i < max_open_zone; i++)
+  for(int i = 0; i < NBLK; i++)
     ZTF[i] = -1;
   for(int i = 0; i <= NBLK; i++)
     FB[i] = i;
-  for(int i = 0; i < max_open_zone; i++)
+  for(int i = 0; i < NBLK; i++)
     for(int j = 0; j < DEG_ZONE * NSECT * NPAGE; j++)
       TL_BITMAP[i][j] = 0;
 
+  OPEN_ZONE = 0;
 }
 
 int zns_write(int start_lba, int nsect, u32 *data)
@@ -89,6 +92,8 @@ int zns_write(int start_lba, int nsect, u32 *data)
     int c_fcg = lba % NUM_FCG;
 
     int c_zone = lba;
+    if(c_zone >= NBLK)
+      return -1;
     int c_bank = c_fcg * DEG_ZONE + b_offset;
 
     if(ZONE[c_zone][0] == 0 || ZONE[c_zone][0] == 1) {
@@ -97,13 +102,15 @@ int zns_write(int start_lba, int nsect, u32 *data)
         return -1;
 
       if(ZONE[c_zone][0] == 0) {
-        if(FB[NBLK] == NBLK - MAX_OPEN_ZONE) return -1;
+        if(OPEN_ZONE == MAX_OPEN_ZONE) return -1;
+        if(FB[NBLK] == 0) return -1;
         ZTF[c_zone] = FB[0];
 
         for(int i = 0; i < NBLK-1; i++)
           FB[i] = FB[i+1];
         FB[NBLK-1] = -1;
-        FB[NBLK] += 1; // use free blk!!
+        FB[NBLK] -= 1; // use free blk!!
+        OPEN_ZONE += 1;
         ZONE[c_zone][0] = 1;
       }
      
@@ -115,8 +122,10 @@ int zns_write(int start_lba, int nsect, u32 *data)
         nand_write(c_bank, ZTF[c_zone], p_offset, BUFFER[c_zone], spare);
       }
 
-      if(ZONE[c_zone][1] == ZONE[c_zone][2] + DEG_ZONE * NSECT * NPAGE) //full checking
+      if(ZONE[c_zone][1] == ZONE[c_zone][2] + DEG_ZONE * NSECT * NPAGE) {//full checking
         ZONE[c_zone][0] = 2;
+        OPEN_ZONE -= 1;
+      }
     }
 
     i_sect++;
@@ -139,11 +148,16 @@ void zns_read(int start_lba, int nsect, u32 *data)
     int c_fcg = lba % NUM_FCG;
 
     int c_zone = lba;
+    if(c_zone >= NBLK)
+      return ;
     int c_bank = c_fcg * DEG_ZONE + b_offset;
 
-    if(ZONE[c_zone][0] == 0)
-      return;
-    if(ZONE[c_zone][0] == 1) {
+    if(ZONE[c_zone][0] == 0) {
+      data[i_sect] = -1;
+      i_sect++;
+      continue;
+    }
+    if(ZONE[c_zone][0] == 1 || ZONE[c_zone][0] == 2) {
       if(ZONE[c_zone][1] <= c_lba) {
         data[i_sect] = -1;
         i_sect++;
@@ -176,6 +190,8 @@ int zns_reset(int lba)
   int c_zone = lba;
   int c_bank = c_fcg * DEG_ZONE + b_offset;
 
+  if(c_zone >= NBLK)
+    return -1;
   if(ZONE[c_zone][0] != 2)
     return -1;
 
@@ -192,11 +208,25 @@ int zns_reset(int lba)
 
 void zns_get_desc(int lba, int nzone, struct zone_desc *descs)
 {
+  lba = lba / NSECT;
+  lba = lba / DEG_ZONE;
+  lba = lba / NPAGE;
+  int c_zone = lba;
+  
+  for(int i = 0; i < nzone; i++) {
+    if(i + c_zone >= NBLK)
+      return;
+
+    descs[i].state = ZONE[i + c_zone][0];
+    descs[i].slba = ZONE[i + c_zone][2];
+    descs[i].wp = ZONE[i + c_zone][1];
+  }
   return;
 }
 
 int zns_izc(int src_zone, int dest_zone, int copy_len, int *copy_list)
 {
+  
   return 0;
 }
 
