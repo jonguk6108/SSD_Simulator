@@ -29,8 +29,9 @@ int** ZONE; // [zone number][state, write pointer, state lba]; // 0 empty, 1 ope
 u32** BUFFER; // [zone number][value of sectors + lba];
 int* ZTF; //[zone number] = blk number;
 int* FB; //[queue] = size(numbers of freeblk), freeblk;
-int** TL_BITMAP; // [zone number][zone_tlnum, bitmap];
-
+int** TL_BITMAP; // [zone number][bit map ( DEG_ZONE * NSECT * NPAGE) , zone_tlnum];
+int* TL_WP;
+u32** TL_BUFFER;
 int OPEN_ZONE;
 
 void zns_init(int nbank, int nblk, int npage, int dzone, int max_open_zone)
@@ -56,7 +57,11 @@ void zns_init(int nbank, int nblk, int npage, int dzone, int max_open_zone)
   FB = (int *)malloc(sizeof(int) * (NBLK+1));
   TL_BITMAP = (int **)malloc(sizeof(int*) * NBLK);
   for(int i = 0; i < NBLK; i++)
-    TL_BITMAP[i] = (int *)malloc(sizeof(int) * DEG_ZONE * NSECT * NPAGE);
+    TL_BITMAP[i] = (int *)malloc(sizeof(int) * (DEG_ZONE * NSECT * NPAGE + 1));
+  TL_WP = (int *)malloc(sizeof(int) * NBLK);
+  TL_BUFFER = (u32 **)malloc(sizeof(u32*) * NBLK);
+  for(int i = 0; i < NBLK; i++)
+    TL_BUFFER[i] = (u32 *)malloc(sizeof(u32) * NSECT);
  
   for(int i = 0; i < NBLK; i++) {
     ZONE[i][0] = 0;
@@ -70,11 +75,49 @@ void zns_init(int nbank, int nblk, int npage, int dzone, int max_open_zone)
     ZTF[i] = -1;
   for(int i = 0; i <= NBLK; i++)
     FB[i] = i;
-  for(int i = 0; i < NBLK; i++)
+  for(int i = 0; i < NBLK; i++) {
     for(int j = 0; j < DEG_ZONE * NSECT * NPAGE; j++)
       TL_BITMAP[i][j] = 0;
+    TL_BITMAP[i][DEG_ZONE * NSECT * NPAGE] = -1;
+  }
+  for(int i = 0; i < NBLK; i++)
+    TL_WP[i] = 0;
+  for(int i = 0; i < NBLK; i++)
+    for(int j = 0; j < NSECT; j++)
+      TL_BUFFER[i][j] = - 1;
 
   OPEN_ZONE = 0;
+}
+
+void fill_tl(int zone, int c_lba, int tl_num) {     //fill_tl(c_zone, c_lba + 1, tl_num + 1);
+  int tl_size = DEG_ZONE * NSECT * NPAGE;
+  int lba = c_lba;
+  int c_sect = lba % NSECT;
+  lba = lba / NSECT;
+  int b_offset = lba % DEG_ZONE;
+  lba = lba / DEG_ZONE;
+  int p_offset = lba % NPAGE;
+  int c_fcg = zone % NUM_FCG;
+  int c_bank = c_fcg * DEG_ZONE + b_offset;
+
+
+  if(tl_num >= tl_size)
+    return;
+  if(TL_BITMAP[zone][tl_num] == 0)
+    return;
+
+  u32 data[1];
+  zns_read(c_lba, 1, data);
+
+  TL_WP[zone]++;
+  TL_BUFFER[zone][tl_num] = data[0];
+
+  if(c_sect == NSECT - 1) {
+    u32 spare[] = {c_lba};
+    nand_write(c_bank, TL_BITMAP[zone][tl_size], p_offset, TL_BUFFER[zone], spare);
+  }
+  
+  fill_tl(zone, c_lba + 1, tl_num + 1);
 }
 
 int zns_write(int start_lba, int nsect, u32 *data)
@@ -128,6 +171,34 @@ int zns_write(int start_lba, int nsect, u32 *data)
       }
     }
 
+    else if(ZONE[c_zone][0] == 2)
+      return -1;
+
+    else if(ZONE[c_zone][0] == 3) {
+      int tl_num = p_offset * DEG_ZONE * NSECT + b_offset * NSECT + c_sect;
+      if(TL_BITMAP[c_zone][tl_num] == 1)
+        return -1;
+      if( TL_WP[c_zone] != tl_num)
+        return -1;
+
+      TL_WP[c_zone]++;
+      TL_BUFFER[c_zone][c_sect] = data[i_sect];
+
+      if(c_sect == NSECT-1) {
+        u32 spare[] = {c_lba};
+        nand_write(c_bank, TL_BITMAP[c_zone][DEG_ZONE * NSECT * NPAGE], p_offset, TL_BUFFER[c_zone], spare);
+      }
+
+      fill_tl(c_zone, c_lba + 1, tl_num + 1);
+
+      if(TL_WP[c_zone] == DEG_ZONE * NSECT * NPAGE) {
+        zns_reset(c_zone * DEG_ZONE * NSECT * NPAGE);
+        ZONE[c_zone][0] = 2;
+        ZTF[c_zone] = TL_BITMAP[c_zone][DEG_ZONE * NSECT * NPAGE];
+        OPEN_ZONE -= 1;
+      }
+    }
+
     i_sect++;
   }
   return 0;
@@ -157,20 +228,40 @@ void zns_read(int start_lba, int nsect, u32 *data)
       i_sect++;
       continue;
     }
-    if(ZONE[c_zone][0] == 1 || ZONE[c_zone][0] == 2) {
+    else if(ZONE[c_zone][0] == 1 || ZONE[c_zone][0] == 2) {
       if(ZONE[c_zone][1] <= c_lba) {
         data[i_sect] = -1;
         i_sect++;
         continue;
       }
 
-      if( (ZONE[c_zone][1] / NSECT) * NSECT <= c_lba && c_sect != NSECT  )
+      if( (ZONE[c_zone][1] / NSECT) * NSECT <= c_lba && (ZONE[c_zone][1] / NSECT) * NSECT != NSECT-1  )
        data[i_sect] = BUFFER[ c_zone ][c_sect];
       else {
         u32 r_data[NSECT];
         u32 spare[1];
         nand_read(c_bank, ZTF[c_zone], p_offset, r_data, spare);
         data[i_sect] = r_data[c_sect];
+      }
+    }
+    else if(ZONE[c_zone][0] == 3) {
+      int i_tl = c_lba - c_zone * DEG_ZONE * NSECT * NPAGE;
+
+      if(TL_WP[c_zone] > i_tl) { // this data in tl zone
+        if( (TL_WP[c_zone] / NSECT) * NSECT <= i_tl && (TL_WP[c_zone] / NSECT) * NSECT != NSECT-1 )
+          data[i_sect] = TL_BUFFER[c_zone][c_sect];
+        else {
+          u32 r_data[NSECT];
+          u32 spare[1];
+          nand_read(c_bank, TL_BITMAP[c_zone][DEG_ZONE * NSECT * NPAGE], p_offset, r_data, spare);
+          data[i_sect] = r_data[c_sect];
+        }
+      }
+      else {
+        u32 r_data[NSECT];
+        u32 spare[1];
+        nand_read(c_bank, ZTF[c_zone], p_offset, r_data, spare);
+        data[i_sect] = r_data[c_sect]; 
       }
     }
 
@@ -226,11 +317,45 @@ void zns_get_desc(int lba, int nzone, struct zone_desc *descs)
 
 int zns_izc(int src_zone, int dest_zone, int copy_len, int *copy_list)
 {
-  
+  if(src_zone == dest_zone )
+    return -1;
+  if(src_zone >= NBLK || dest_zone >= NBLK)
+    return -1;
+  if(ZONE[src_zone][0] != 2 || ZONE[dest_zone][0] != 0)
+    return -1;
+
+  u32 data[1];
+  for(int i = 0; i < copy_len; i++) {
+
+    int s_lba = ZONE[src_zone][2] + copy_list[i];
+    zns_read(s_lba, 1, data);
+    int d_lba = ZONE[dest_zone][2] + i;
+    if( zns_write(d_lba, 1, data) == -1)
+      return -1;
+  }
+  zns_reset( ZONE[src_zone][2]);
   return 0;
 }
 
 int zns_tl_open(int zone, u8 *valid_arr)
 {
+  if(ZONE[zone][0] != 2)
+    return -1;
+  
+  if(OPEN_ZONE == MAX_OPEN_ZONE) return -1;
+  if(FB[NBLK] == 0) return -1;
+  TL_BITMAP[zone][DEG_ZONE * NSECT * NPAGE] = FB[0];
+
+  for(int i = 0; i < NBLK -1; i++)
+    FB[i] = FB[i+1];
+  FB[NBLK-1] = -1;
+  FB[NBLK] -= 1;
+  OPEN_ZONE += 1;
+  ZONE[zone][0] = 3;
+  for(int i = 0; i < DEG_ZONE * NSECT * NPAGE; i++)
+    TL_BITMAP[zone][i] = valid_arr[i];
+  TL_WP[zone] = 0;
+  
+  fill_tl(zone, zone*DEG_ZONE * NSECT * NPAGE, 0);
   return 0;
 }
