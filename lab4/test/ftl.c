@@ -10,14 +10,15 @@
  * Sungkyunkwan University
  * http://nyx.skku.ac.kri
  *
- * Oct. 13, 2022. v3
+ * Nov. 17, 2022. v6
  * 2017312848 Park Jonguk
- * Submitted
+ * Submitted (finished) -> change gc
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include "ftl.h"
 #include "nand.h"
+#define NSECT    PAGE_DATA_SIZE / (int)sizeof(u32)		// #sectors per page
 
 int** gtd; // gtd[bank][map page] -> (ppn)
 int*** cmt; // cmt[bank][cache_slot][0~ N_MAP_ENTRIES_PER_PAGE -1] : data_ppn / cmt[N_MAP_ENTRIES_PER_PAGE] : map page / cmt[N_MAP_ENTRIES_PER_PAGE + 1] -1 : no use, 1 : use
@@ -101,18 +102,18 @@ static void map_write(u32 bank, u32 map_page, u32 cache_slot) // from cmt to nan
 {
     if(cmt[bank][cache_slot][N_MAP_ENTRIES_PER_PAGE+1] == -1) {
         agecmt[bank][cache_slot] = 0;
-        for(int i = 0; i < N_MAP_ENTRIES_PER_PAGE + 2; i++)
+        for(unsigned int i = 0; i < N_MAP_ENTRIES_PER_PAGE + 2; i++)
             cmt[bank][cache_slot][i] = -1;    
         return;
     }
 
     int ppn, blk, page;
-    int readppn, readblk, readpage, readcache;
-    int i = 0;
+    int readppn, readblk, readpage;
+    unsigned int i = 0;
     u32 data[PAGE_DATA_SIZE / sizeof(u32)] = { 0 };
     u32 spare[PAGE_SPARE_SIZE / sizeof(u32)] = { 0 };
 
-    for(i = 0; i < PAGE_DATA_SIZE / sizeof(u32); i++)
+    for(i = 0; i < NSECT; i++)
         data[i] = cmt[bank][cache_slot][i];
     spare[0] = map_page;
     
@@ -144,7 +145,8 @@ static void map_read(u32 bank, u32 map_page, u32 cache_slot)
 {
     stats.cache_miss++;
     int ppn = gtd[bank][map_page];
-    int blk, page, i;
+    int blk, page;
+    unsigned int i;
     u32 data[PAGE_DATA_SIZE / sizeof(u32)] = { 0 };
     u32 spare[PAGE_SPARE_SIZE / sizeof(u32)] = { 0 };
 
@@ -221,7 +223,8 @@ static void garbage_collection(u32 bank)
 
     int max = -1, maxblk = -1;
     int cnt = 0;
-    int i = 0, j = 0;
+    int i = 0;
+    unsigned int j = 0;
     int tarblk = -1, tarpage = 0;
     int mappb = -1;
     int cache;
@@ -250,33 +253,53 @@ static void garbage_collection(u32 bank)
         if(val[bank][maxblk][i] != 1) continue;
         if( nand_read(bank, maxblk,i, data, spare) != 0) abort();
         mappb = spare[0];
-            
+
+        int usecache = 0;
         for(cache = 0; cache < N_CACHED_MAP_PAGE_PB; cache++) 
             if(cmt[bank][cache][N_MAP_ENTRIES_PER_PAGE] == mappb) {
                 stats.cache_hit++;
+                usecache = 1;
                 break;
             }
-        if(cache == N_CACHED_MAP_PAGE_PB) {
-            for(cache = 0; cache < N_CACHED_MAP_PAGE_PB; cache++) 
-                if(cmt[bank][cache][N_MAP_ENTRIES_PER_PAGE] == -1)
-                    break;
-            if(cache == N_CACHED_MAP_PAGE_PB) {
-                cache_garbage_collection(bank);
-                for(cache = 0; cache < N_CACHED_MAP_PAGE_PB; cache++) 
-                    if(cmt[bank][cache][N_MAP_ENTRIES_PER_PAGE] == -1)
-                        break;
-            }
-            map_read(bank, mappb, cache);
-        }
-        use_cmt(bank, cache);
         
-        for(j = 0; j < PAGE_DATA_SIZE / sizeof(u32); j++)
-            if( cmt[bank][cache][j] == maxblk * PAGES_PER_BLK + i)
+        if(usecache == 1) {
+          for(j = 0; j < NSECT; j++)
+              if( cmt[bank][cache][j] == maxblk * PAGES_PER_BLK + i)
                 cmt[bank][cache][j] = tarblk * PAGES_PER_BLK + tarpage;
+          use_cmt(bank, cache);
+          cmt[bank][cache][N_MAP_ENTRIES_PER_PAGE + 1] = 1;
+        }
+        if(usecache == 0) {
+          int writeppn, writeblk, writepage;
+          find_ppn(bank, 2, &writeppn);
+          if(writeppn == -1) {
+            map_garbage_collection(bank);
+            find_ppn(bank, 2, &writeppn);
+          }
+          ppn2bp(writeppn, &writeblk, &writepage);
+          
+          int readppn = gtd[bank][mappb];
+          int readblk, readpage;
+          u32 mapdata[PAGE_DATA_SIZE / sizeof(u32)] = { 0 };
+          u32 mapspare[PAGE_SPARE_SIZE / sizeof(u32)] = { 0 };
+
+          if(readppn != -1) {
+            ppn2bp(readppn, &readblk, &readpage);
+            nand_read(bank, readblk, readpage, mapdata, mapspare);
+            val[bank][readblk][readpage] = 2;
+          }
+
+          for(j = 0; j < NSECT; j++)
+              if( mapdata[j] ==  (unsigned int) maxblk * PAGES_PER_BLK + i)
+                mapdata[j] = tarblk * PAGES_PER_BLK + tarpage;
+          if( nand_write(bank, writeblk, writepage, mapdata, mapspare) != 0) abort();
+          val[bank][writeblk][writepage] = 1;
+          useblk[bank][writeblk] = 2;
+          gtd[bank][mappb] = writeblk * PAGES_PER_BLK + writepage;
+        }
+
         if(nand_write(bank, tarblk, tarpage, data, spare) != 0) abort();
         val[bank][tarblk][tarpage] = 1;
-        cmt[bank][cache][N_MAP_ENTRIES_PER_PAGE + 1] = 1;
-        use_cmt(bank, cache);
         tarpage++;
         stats.gc_write++;
     }
@@ -314,10 +337,10 @@ void ftl_open()
 
     nand_init(N_BANKS, BLKS_PER_BANK, PAGES_PER_BLK);
     for(i = 0; i < N_BANKS; i++) {
-        for(j = 0; j < N_MAP_PAGES_PB; j++)
+        for(j = 0; j < (int) N_MAP_PAGES_PB; j++)
             gtd[i][j] = -1;
         for(j = 0; j < N_CACHED_MAP_PAGE_PB; j++) {
-            for(k = 0; k < N_MAP_ENTRIES_PER_PAGE + 2; k++)
+            for(k = 0; k < (int) N_MAP_ENTRIES_PER_PAGE + 2; k++)
                 cmt[i][j][k] = -1;
             agecmt[i][j] = 0;
         }
@@ -363,7 +386,7 @@ void ftl_read(u32 lba, u32 nsect, u32 *read_buffer)
             stats.cache_miss++;
         }
 
-        for(i = 0; i < PAGE_DATA_SIZE / sizeof(u32); i++ )
+        for(i = 0; i < NSECT; i++ )
             data[i] = 0xffffffff;
 
         readppn = cmt[bank][cache][mapof];
@@ -395,7 +418,7 @@ void ftl_write(u32 lba, u32 nsect, u32 *write_buffer)
     u32 valpagedata[PAGE_DATA_SIZE / sizeof(u32)] = { 0 };
 
     while(nsect > 0) {
-        for(i = 0; i < PAGE_DATA_SIZE / sizeof(u32); i++) {
+        for(i = 0; i < NSECT; i++) {
             pagedata[i] = -1;
             valpagedata[i] = 0;
         }
@@ -436,13 +459,13 @@ void ftl_write(u32 lba, u32 nsect, u32 *write_buffer)
             map_read(bank, mappb, cache);
             stats.cache_miss++;
         }
-        readppn = cmt[bank][cache][mapof];
         use_cmt(bank, cache);
+        readppn = cmt[bank][cache][mapof];
         if( readppn != -1 ) {
             ppn2bp(readppn, &readblk, &readpage);
             if(nand_read(bank, readblk, readpage, data, spare) != 0) abort();
             val[bank][readblk][readpage] = 2;
-            for(i = 0; i < PAGE_DATA_SIZE / sizeof(u32); i++)
+            for(i = 0; i < NSECT; i++)
                 if(valpagedata[i] == 0)
                     pagedata[i] = data[i];
         }
@@ -458,6 +481,7 @@ void ftl_write(u32 lba, u32 nsect, u32 *write_buffer)
         if( nand_write(bank, blk, page, pagedata, spare) != 0) abort();
         val[bank][blk][page] = 1;
         useblk[bank][blk] = 1;
+
         cmt[bank][cache][mapof] = ppn;
         cmt[bank][cache][N_MAP_ENTRIES_PER_PAGE+1] = 1;
         use_cmt(bank, cache);

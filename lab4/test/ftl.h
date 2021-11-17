@@ -19,9 +19,9 @@
 typedef unsigned int 		u32;
 
 #define SECTOR_SIZE					sizeof(u32)
-#define N_BANKS						16
-#define BLKS_PER_BANK				100
-#define PAGES_PER_BLK				24
+#define N_BANKS						8
+#define BLKS_PER_BANK				40
+#define PAGES_PER_BLK			  16
 #define SECTORS_PER_PAGE			(PAGE_DATA_SIZE / sizeof(u32))
 
 #define OP_RATIO					7
@@ -30,7 +30,7 @@ typedef unsigned int 		u32;
 #define N_MAP_ENTRIES_PER_PAGE		(PAGE_DATA_SIZE / MAP_ENTRY_SIZE)
 
 /* Per Bank */
-#define CMT_RATIO					5
+#define CMT_RATIO					1
 #define CMT_SIZE_PB					(BLKS_PER_BANK * PAGES_PER_BLK * sizeof(u32) * CMT_RATIO / 100) // 5% of total map table
 
 #define N_CACHED_MAP_PAGE_PB_TEMP	((const int)(CMT_SIZE_PB / (MAP_ENTRY_SIZE * N_MAP_ENTRIES_PER_PAGE)))
